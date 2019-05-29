@@ -127,14 +127,15 @@ class MyWindow(Gtk.Window):
 
         if self.alarm_image_set != self.alarm_set or self.alarm_image is None:
             self.alarm_image_set = self.alarm_set
-            self.alarm_image = Gtk.Image()
+            if self.alarm_image is None:
+                self.alarm_image = Gtk.Image()
             if self.alarm_set:
                 self.alarm_image.set_from_file("Alarm_set.png")
                 self.alarm_image.set_tooltip_text(str(self.hh_alarm) + ":" + str(self.mm_alarm))
             else:
                 self.alarm_image.set_from_file("Alarm_not_set.png")
                 self.alarm_image.set_tooltip_text("")
-        self.time_label.pack_start(self.alarm_image, expand=False, fill=False, padding=0)
+        self.time_label.pack_start(self.alarm_image, expand=True, fill=True, padding=0)
 
         self.add(self.time_label)
         self.show_all()
@@ -181,6 +182,8 @@ class MyWindow(Gtk.Window):
         self.entry.pack_start(self.sec_entry, expand=True, fill=True, padding=10)
         self.sec_entry.set_visibility(True)
 
+        self.min_entry.grab_focus()
+
         self.show_all()
 
     def get_alarm_values(self):
@@ -211,6 +214,8 @@ class MyWindow(Gtk.Window):
         self.min_alarm.set_text("00")
         self.entry.pack_start(self.min_alarm, expand=True, fill=True, padding=10)
         self.min_alarm.set_visibility(True)
+
+        self.hour_alarm.grab_focus()
 
         self.show_all()
 
@@ -308,12 +313,14 @@ class MyWindow(Gtk.Window):
             if self.clock_mode:
                 self.clock_mode = False
                 self.counter_set = True
+                event.keyval = 0
                 self.get_countdown_values()
 
         elif event.keyval in (65, 97):                  # a, A --> Alarm mode
             if self.clock_mode:
                 self.clock_mode = True
                 self.alarm_set = True
+                event.keyval = 0
                 self.get_alarm_values()
 
         elif event.keyval == 65293:                     # Enter --> Gather Countdown / Alarm values
