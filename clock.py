@@ -316,7 +316,7 @@ class MyWindow(Gtk.Window):
                 self.alarm_set = True
                 self.get_alarm_values()
 
-        elif event.keyval == 65293:                     # Enter --> Gather Countdown values
+        elif event.keyval == 65293:                     # Enter --> Gather Countdown / Alarm values
             if self.counter_set:
                 proceed = True
                 minutes = self.min_entry.get_text()
@@ -346,9 +346,10 @@ class MyWindow(Gtk.Window):
                 if proceed:
                     self.start_alarm()
 
-        elif event.keyval in (83, 115):                  # s, S --> To STOP Countdown
-            if not self.clock_mode:
-                self.clock_mode = True
+        elif event.keyval in (83, 115):                  # s, S --> To STOP Countdown / Alarm
+            self.clock_mode = True
+            self.counter_set = False
+            self.alarm_set = False
 
         # elif event.keyval in (77, 109):                 # m, M --> MOVE window
             # keyboard.press_and_release('alt+F7')        # Needs sudo (!?). Wrong installation or already required?
