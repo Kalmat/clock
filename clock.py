@@ -60,7 +60,7 @@ class MyWindow(Gtk.Window):
 
         self.tran_setup()
         self.set_title("Clock by alef")
-        self.set_icon_from_file(get_resource_path("clock.ico"))
+        self.set_icon_from_file(get_resource_path("resources/clock.ico"))
         # self.set_size_request(400, 400)  # Not needed. Window will resize automatically
         self.set_resizable(False)   # Comment this if you want a resizable window (text size will not change)
         self.set_decorated(False)   # Comment to add title bar
@@ -132,10 +132,10 @@ class MyWindow(Gtk.Window):
             if self.alarm_image is None:
                 self.alarm_image = Gtk.Image()
             if self.alarm_set:
-                self.alarm_image.set_from_file(get_resource_path("Alarm_set.png"))
+                self.alarm_image.set_from_file(get_resource_path("resources/Alarm_set.png"))
                 self.alarm_image.set_tooltip_text(str(self.hh_alarm) + ":" + str(self.mm_alarm))
             else:
-                self.alarm_image.set_from_file(get_resource_path("Alarm_not_set.png"))
+                self.alarm_image.set_from_file(get_resource_path("resources/Alarm_not_set.png"))
                 self.alarm_image.set_tooltip_text("")
         self.time_label.pack_end(self.alarm_image, expand=True, fill=True, padding=0)
 
@@ -267,7 +267,7 @@ class MyWindow(Gtk.Window):
             message = "Your countdown for %02d:%02d finished!!!" % (self.init_minutes, self.init_seconds)
         subprocess.call(["notify-send", "-t", "0", message])
         pygame.init()
-        pygame.mixer.music.load(get_resource_path("beep.wav"))
+        pygame.mixer.music.load(get_resource_path("resources/beep.wav"))
         pygame.mixer.music.play()
         time.sleep(1)
         pygame.mixer.music.stop()
@@ -304,7 +304,8 @@ class MyWindow(Gtk.Window):
         self.change_time_label_color("white")
 
     def on_key_press(self, widget, event):
-        if event.keyval == 65307:                       # Escape --> QUIT
+        # check values at https://gitlab.gnome.org/GNOME/gtk/raw/master/gdk/gdkkeysyms.h (without leading 'GDK_KEY_')
+        if event.keyval == Gdk.keyval_from_name("Escape"):      # Escape --> QUIT
             if self.allow_quit:
                 Gtk.main_quit()
             else:
@@ -316,14 +317,14 @@ class MyWindow(Gtk.Window):
                 self.draw_clock()
                 self.start_timer()
 
-        elif event.keyval in (84, 116):                 # t, T --> Add / Remove TITLE BAR
+        elif event.keyval == Gdk.keyval_from_name("t"):         # t, T --> Add / Remove TITLE BAR
             if self.clock_mode:
                 if self.get_decorated():
                     self.set_decorated(False)
                 else:
                     self.set_decorated(True)
 
-        elif event.keyval in(67, 99):                   # c, C --> Counter mode
+        elif event.keyval == Gdk.keyval_from_name("c"):         # c, C --> Counter mode
             if self.clock_mode:
                 self.clock_mode = False
                 self.counter_set = True
@@ -331,7 +332,7 @@ class MyWindow(Gtk.Window):
                 event.keyval = 0
                 self.get_countdown_values()
 
-        elif event.keyval in (65, 97):                  # a, A --> Alarm mode
+        elif event.keyval == Gdk.keyval_from_name("a"):         # a, A --> Alarm mode
             if self.clock_mode:
                 self.clock_mode = True
                 self.alarm_set = True
@@ -339,7 +340,7 @@ class MyWindow(Gtk.Window):
                 event.keyval = 0
                 self.get_alarm_values()
 
-        elif event.keyval == 65293:                     # Enter --> Gather Countdown / Alarm values
+        elif event.keyval == Gdk.keyval_from_name("Return"):    # Enter --> Gather Countdown / Alarm values
             if self.counter_set:
                 proceed = True
                 minutes = self.min_entry.get_text()
@@ -369,21 +370,18 @@ class MyWindow(Gtk.Window):
                 if proceed:
                     self.start_alarm()
 
-        elif event.keyval in (83, 115):                  # s, S --> To STOP Countdown / Alarm
+        elif event.keyval == Gdk.keyval_from_name("s"):         # s, S --> To STOP Countdown / Alarm
             if self.clock_mode or \
                     (not self.clock_mode and self.counter_set):
                 self.clock_mode = True
                 self.counter_set = False
                 self.alarm_set = False
 
-        elif event.keyval in (77, 109):                   # m, M --> MOVE window
+        elif event.keyval == Gdk.keyval_from_name("m"):         # m, M --> MOVE window
             keyboard = Controller()
             with keyboard.pressed(Key.alt):
                 keyboard.press(Key.f7)
                 keyboard.release(Key.f7)
-
-        # else:                                           # Uncomment to get key values
-        #    print event.keyval
 
 
 def main():
