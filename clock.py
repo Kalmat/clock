@@ -56,9 +56,10 @@ class MyWindow(Gtk.Window):
         self.connect("enter-notify-event", self.on_hover_in)
         self.connect("leave-notify-event", self.on_hover_out)
         self.connect("key-press-event", self.on_key_press)
-        self.connect("delete-event", lambda w: Gtk.main_quit)
+        self.connect("delete-event", lambda y,z: Gtk.main_quit())
 
         self.tran_setup()
+        self.set_wmclass("Clock by alef", "Clock by alef")
         self.set_title("Clock by alef")
         self.set_icon_from_file(get_resource_path("resources/clock.ico"))
         # self.set_size_request(400, 400)  # Not needed. Window will resize automatically
