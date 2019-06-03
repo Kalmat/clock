@@ -11,7 +11,7 @@ I couldn't find anything similar, so I decided to code it!
 Feel free to use it, modify it, distribute it or whatever... just be sure you mention me or... well, nothing really. 
 
 *** USAGE:
-MOVE WINDOW:    Home+MouseLeft or Alt+F7
+MOVE WINDOW:    m/M or Home+MouseLeft or Alt+F7
 QUIT PROGRAM:   Escape
 ALARM           a (set alarm)
 TIMER:          c (activate counter) / s (stop counter)
@@ -36,6 +36,7 @@ import os
 import subprocess
 import pygame
 import time
+from pynput.keyboard import Key, Controller
 
 
 def get_resource_path(rel_path):
@@ -73,7 +74,7 @@ class MyWindow(Gtk.Window):
         self.time_label = None
         self.font = "light 40"
         self.font_color = "white"
-        self.tooltip = "MOVE:     Home+MouseLeft\nQUIT:        Escape\nALARM:   a\nTIMER:     c / s\nOTHER:    Home+MouseRight"
+        self.tooltip = "MOVE:    m / Alt+F7\nQUIT:        Escape\nALARM:   a / s\nTIMER:     c / s\nOTHER:    Home+MouseRight"
         self.minutes = 5
         self.init_minutes = 5
         self.init_seconds = 0
@@ -374,6 +375,12 @@ class MyWindow(Gtk.Window):
                 self.clock_mode = True
                 self.counter_set = False
                 self.alarm_set = False
+
+        elif event.keyval in (77, 109):                   # m, M --> MOVE window
+            keyboard = Controller()
+            with keyboard.pressed(Key.alt):
+                keyboard.press(Key.f7)
+                keyboard.release(Key.f7)
 
         # else:                                           # Uncomment to get key values
         #    print event.keyval
