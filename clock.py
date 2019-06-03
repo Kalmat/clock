@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 __version__ = "1.0.1"
@@ -36,7 +36,6 @@ import os
 import subprocess
 import pygame
 import time
-# import keyboard
 
 
 def get_resource_path(rel_path):
@@ -68,12 +67,13 @@ class MyWindow(Gtk.Window):
         self.set_position(Gtk.WindowPosition.CENTER)
 
         self.clock_mode = True
+        self.allow_quit = True
         self.alarm_set = False
         self.counter_set = False
         self.time_label = None
         self.font = "light 40"
         self.font_color = "white"
-        self.tooltip = "MOVE:   Home+MouseLeft\nQUIT:       Escape\nALARM:    a\nTIMER:    c / s\nOTHER:  Home+MouseRight"
+        self.tooltip = "MOVE:     Home+MouseLeft\nQUIT:        Escape\nALARM:   a\nTIMER:     c / s\nOTHER:    Home+MouseRight"
         self.minutes = 5
         self.init_minutes = 5
         self.init_seconds = 0
@@ -102,6 +102,7 @@ class MyWindow(Gtk.Window):
 
     def draw_clock(self):
         self.remove_time_label()
+        self.allow_quit = True
 
         self.time_label = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.time_label.set_homogeneous(False)
@@ -130,12 +131,12 @@ class MyWindow(Gtk.Window):
             if self.alarm_image is None:
                 self.alarm_image = Gtk.Image()
             if self.alarm_set:
-                self.alarm_image.set_from_file("Alarm_set.png")
+                self.alarm_image.set_from_file(get_resource_path("Alarm_set.png"))
                 self.alarm_image.set_tooltip_text(str(self.hh_alarm) + ":" + str(self.mm_alarm))
             else:
-                self.alarm_image.set_from_file("Alarm_not_set.png")
+                self.alarm_image.set_from_file(get_resource_path("Alarm_not_set.png"))
                 self.alarm_image.set_tooltip_text("")
-        self.time_label.pack_start(self.alarm_image, expand=True, fill=True, padding=0)
+        self.time_label.pack_end(self.alarm_image, expand=True, fill=True, padding=0)
 
         self.add(self.time_label)
         self.show_all()
@@ -163,6 +164,7 @@ class MyWindow(Gtk.Window):
 
         self.min_entry = Gtk.Entry()
         self.min_entry.set_width_chars(2)
+        self.min_entry.set_max_length(2)
         self.min_entry.modify_font(Pango.FontDescription(self.font))
         self.min_entry.set_text("10")
         self.entry.pack_start(self.min_entry, expand=True, fill=True, padding=10)
@@ -177,6 +179,7 @@ class MyWindow(Gtk.Window):
 
         self.sec_entry = Gtk.Entry()
         self.sec_entry.set_width_chars(2)
+        self.sec_entry.set_max_length(2)
         self.sec_entry.modify_font(Pango.FontDescription(self.font))
         self.sec_entry.set_text("00")
         self.entry.pack_start(self.sec_entry, expand=True, fill=True, padding=10)
@@ -196,6 +199,7 @@ class MyWindow(Gtk.Window):
 
         self.hour_alarm = Gtk.Entry()
         self.hour_alarm.set_width_chars(2)
+        self.hour_alarm.set_max_length(2)
         self.hour_alarm.modify_font(Pango.FontDescription(self.font))
         self.hour_alarm.set_text("00")
         self.entry.pack_start(self.hour_alarm, expand=True, fill=True, padding=10)
@@ -210,6 +214,7 @@ class MyWindow(Gtk.Window):
 
         self.min_alarm = Gtk.Entry()
         self.min_alarm.set_width_chars(2)
+        self.min_alarm.set_max_length(2)
         self.min_alarm.modify_font(Pango.FontDescription(self.font))
         self.min_alarm.set_text("00")
         self.entry.pack_start(self.min_alarm, expand=True, fill=True, padding=10)
@@ -261,7 +266,7 @@ class MyWindow(Gtk.Window):
             message = "Your countdown for %02d:%02d finished!!!" % (self.init_minutes, self.init_seconds)
         subprocess.call(["notify-send", "-t", "0", message])
         pygame.init()
-        pygame.mixer.music.load("beep.wav")
+        pygame.mixer.music.load(get_resource_path("beep.wav"))
         pygame.mixer.music.play()
         time.sleep(1)
         pygame.mixer.music.stop()
@@ -299,8 +304,16 @@ class MyWindow(Gtk.Window):
 
     def on_key_press(self, widget, event):
         if event.keyval == 65307:                       # Escape --> QUIT
-            if self.clock_mode or event.keyval == 65307:
+            if self.allow_quit:
                 Gtk.main_quit()
+            else:
+                self.clock_mode = True
+                self.counter_set = False
+                self.alarm_set = False
+                self.allow_quit = True
+                self.remove_countdown_values()
+                self.draw_clock()
+                self.start_timer()
 
         elif event.keyval in (84, 116):                 # t, T --> Add / Remove TITLE BAR
             if self.clock_mode:
@@ -313,6 +326,7 @@ class MyWindow(Gtk.Window):
             if self.clock_mode:
                 self.clock_mode = False
                 self.counter_set = True
+                self.allow_quit = False
                 event.keyval = 0
                 self.get_countdown_values()
 
@@ -320,6 +334,7 @@ class MyWindow(Gtk.Window):
             if self.clock_mode:
                 self.clock_mode = True
                 self.alarm_set = True
+                self.allow_quit = False
                 event.keyval = 0
                 self.get_alarm_values()
 
@@ -354,12 +369,11 @@ class MyWindow(Gtk.Window):
                     self.start_alarm()
 
         elif event.keyval in (83, 115):                  # s, S --> To STOP Countdown / Alarm
-            self.clock_mode = True
-            self.counter_set = False
-            self.alarm_set = False
-
-        # elif event.keyval in (77, 109):                 # m, M --> MOVE window
-            # keyboard.press_and_release('alt+F7')        # Needs sudo (!?). Wrong installation or already required?
+            if self.clock_mode or \
+                    (not self.clock_mode and self.counter_set):
+                self.clock_mode = True
+                self.counter_set = False
+                self.alarm_set = False
 
         # else:                                           # Uncomment to get key values
         #    print event.keyval
