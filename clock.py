@@ -65,7 +65,7 @@ class MyWindow(Gtk.Window):
         # self.set_size_request(400, 400)  # Not needed. Window will resize automatically
         self.set_resizable(False)   # Comment this if you want a resizable window (text size will not change)
         self.set_decorated(False)   # Comment to add title bar
-        self.set_keep_above(True)   # Comment to avoid "always on top" behaviour (or Home+Right-Mouse while running)
+        self.set_keep_above(True)   # Comment to avoid "always on top" behavior (or Home+Right-Mouse while running)
         self.set_position(Gtk.WindowPosition.CENTER)
 
         self.clock_mode = True
@@ -138,7 +138,7 @@ class MyWindow(Gtk.Window):
             else:
                 self.alarm_image.set_from_file(get_resource_path("resources/Alarm_not_set.png"))
                 self.alarm_image.set_tooltip_text("")
-        if self.alarm_set:
+        if self.alarm_set:   # Remove this "if" to always show the alarm icon (enabled/disabled)
             self.time_label.pack_end(self.alarm_image, expand=True, fill=True, padding=0)
 
         self.add(self.time_label)
@@ -284,7 +284,7 @@ class MyWindow(Gtk.Window):
             pass
 
     def start_timer(self):
-        if not self.timer:
+        if self.timer is None:
             self.timer = GObject.timeout_add(1000, self.draw_clock)   # This will invoke draw_clock every second
 
     def stop_timer(self):
@@ -322,10 +322,7 @@ class MyWindow(Gtk.Window):
 
         elif event.keyval == Gdk.keyval_from_name("t"):         # t, T --> Add / Remove TITLE BAR
             if self.clock_mode:
-                if self.get_decorated():
-                    self.set_decorated(False)
-                else:
-                    self.set_decorated(True)
+                self.set_decorated(not self.get_decorated())
 
         elif event.keyval == Gdk.keyval_from_name("c"):         # c, C --> Counter mode
             if self.clock_mode:
