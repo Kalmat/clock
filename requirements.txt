@@ -1,0 +1,7 @@
+gi
+cairo
+os
+subprocess
+pygame
+time
+pynput
