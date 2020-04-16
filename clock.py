@@ -352,6 +352,14 @@ class MyWindow(Gtk.Window):
                 event.keyval = 0
                 self.get_alarm_values()
 
+        elif event.keyval == Gdk.keyval_from_name("s"):         # s, S --> STOP Countdown / Alarm
+            self.clock_mode = True
+            self.counter_set = False
+            self.alarm_set = False
+            self.remove_time_label()
+            self.draw_clock()
+            self.start_timer()
+
         elif event.keyval == Gdk.keyval_from_name("Return"):    # Return --> Gather Countdown / Alarm values
             if self.counter_set:
                 proceed = True
@@ -381,13 +389,6 @@ class MyWindow(Gtk.Window):
                     proceed = False
                 if proceed:
                     self.start_alarm()
-
-        elif event.keyval == Gdk.keyval_from_name("s"):         # s, S --> STOP Countdown / Alarm
-            if self.clock_mode or \
-                    (not self.clock_mode and self.counter_set):
-                self.clock_mode = True
-                self.counter_set = False
-                self.alarm_set = False
 
 
 def main():
