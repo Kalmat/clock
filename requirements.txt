@@ -1,7 +1,8 @@
 gi
 cairo
 os
-subprocess
-pygame
 time
+pygame
+winsound
 pynput
+plyer
