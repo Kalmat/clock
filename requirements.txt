@@ -2,7 +2,4 @@ gi
 cairo
 os
 time
-pygame
-winsound
-pynput
-plyer
+playsound
