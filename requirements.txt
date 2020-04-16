@@ -1,5 +1,9 @@
 gi
 cairo
 os
+platform
 time
+plyer
 playsound
+
+
