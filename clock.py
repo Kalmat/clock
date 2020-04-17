@@ -37,6 +37,7 @@ import platform
 import time
 import plyer
 import playsound
+import threading
 
 
 def get_resource_path(rel_path):
@@ -87,6 +88,7 @@ class MyWindow(Gtk.Window):
         self.mm_alarm = ""
         self.timer = None
         self.beep_sound = get_resource_path("resources/beep.wav")
+        self.P = None
 
         self.time_label = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.time_label.set_homogeneous(False)
@@ -97,7 +99,6 @@ class MyWindow(Gtk.Window):
         self.label = Gtk.Label()
         self.label.set_tooltip_text(self.tooltip)
         self.label.set_justify(Gtk.Justification.CENTER)
-        self.pack_label = True
 
         self.alarm_image = Gtk.Image()
         self.alarm_image.set_from_file(get_resource_path("resources/Alarm_set.png"))
@@ -162,7 +163,7 @@ class MyWindow(Gtk.Window):
                 self.alarm_image.set_tooltip_text(str(self.hh_alarm) + ":" + str(self.mm_alarm))
                 self.time_label.pack_end(self.image, expand=True, fill=True, padding=0)
         else:
-            # Change this part to always show the alarm icon (enabled/disabled)
+            # Change this part to always show the alarm icon (enabled or disabled)
             if self.image in self.time_label.get_children():
                 # self.image = self.alarm_not_set_image
                 # self.alarm_image.set_tooltip_text("")
@@ -221,12 +222,14 @@ class MyWindow(Gtk.Window):
             if self.minutes == 0:
                 self.clock_mode = True
                 self.counter_set = False
-                self.beep()
             else:
                 self.seconds = 59
                 self.minutes -= 1
         else:
             self.seconds -= 1
+
+        if self.seconds == 0 and self.minutes == 0:
+            self.notify()
 
     def remove_counter_values(self):
         if self.min_entry in self.time_label.get_children():
@@ -258,10 +261,9 @@ class MyWindow(Gtk.Window):
 
     def check_alarm(self, current_time):
         if self.hh_alarm + ":" + self.mm_alarm == current_time[:5] and current_time[-2:] == "00":
+            self.notify()
             self.clock_mode = True
             self.alarm_set = False
-            self.draw_clock()
-            self.beep()
 
     def remove_alarm_values(self):
         if self.hour_alarm in self.time_label.get_children():
@@ -273,8 +275,7 @@ class MyWindow(Gtk.Window):
         self.hour_alarm.set_text("00")
         self.min_alarm.set_text("00")
 
-    def beep(self):
-
+    def notify(self):
         if self.alarm_set:
             message = "Your alarm time has arrived!!!"
         elif self.counter_set:
@@ -289,6 +290,10 @@ class MyWindow(Gtk.Window):
             timeout=5,
         )
 
+        t = threading.Thread(target=self.beep)
+        t.start()
+
+    def beep(self):
         playsound.playsound(self.beep_sound)
 
     def start_timer(self):
@@ -296,11 +301,9 @@ class MyWindow(Gtk.Window):
             self.timer = GLib.timeout_add(1000, self.draw_clock)   # This will invoke draw_clock every second
 
     def stop_timer(self):
-        try:
+        if self.timer is not None:
             GLib.source_remove(self.timer)
-        except:
-            pass
-        self.timer = None
+            self.timer = None
 
     def on_draw(self, widget, event):
         event.set_source_rgba(0.2, 0.2, 0.2, 0.4)
