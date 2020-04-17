@@ -228,7 +228,7 @@ class MyWindow(Gtk.Window):
         else:
             self.seconds -= 1
 
-        if self.seconds == 0 and self.minutes == 0:
+        if self.seconds == 0 and self.minutes == 0 and self.counter_set:
             self.notify()
 
     def remove_counter_values(self):
