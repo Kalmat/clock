@@ -35,8 +35,8 @@ import cairo
 import os
 import platform
 import time
-from plyer import notification
-from playsound import playsound
+import plyer
+import playsound
 
 
 def get_resource_path(rel_path):
@@ -82,23 +82,62 @@ class MyWindow(Gtk.Window):
         self.init_minutes = 5
         self.init_seconds = 0
         self.seconds = 0
-        self.entry = None
-        self.min_entry = "10"
-        self.sec_entry = "00"
-        self.hour_alarm = "00"
+        self.time_label = None
         self.hh_alarm = ""
-        self.min_alarm = "00"
         self.mm_alarm = ""
         self.timer = None
+        self.beep_sound = get_resource_path("resources/beep.wav")
+
+        self.time_label = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.time_label.set_homogeneous(False)
+        self.change_time_label_color(self.font_color)
+        self.time_label.modify_font(Pango.FontDescription(self.font))
+        self.add(self.time_label)
 
         self.label = Gtk.Label()
         self.label.set_tooltip_text(self.tooltip)
         self.label.set_justify(Gtk.Justification.CENTER)
+        self.pack_label = True
 
         self.alarm_image = Gtk.Image()
         self.alarm_image.set_from_file(get_resource_path("resources/Alarm_set.png"))
         self.alarm_not_set_image = Gtk.Image()
         self.alarm_not_set_image.set_from_file(get_resource_path("resources/Alarm_not_set.png"))
+        self.image = None
+
+        self.hour_alarm = Gtk.Entry()
+        self.hour_alarm.set_width_chars(2)
+        self.hour_alarm.set_max_length(2)
+        self.hour_alarm.modify_font(Pango.FontDescription(self.font))
+        self.hour_alarm.set_text("00")
+        self.hour_alarm.set_visibility(True)
+
+        self.min_alarm = Gtk.Entry()
+        self.min_alarm.set_width_chars(2)
+        self.min_alarm.set_max_length(2)
+        self.min_alarm.modify_font(Pango.FontDescription(self.font))
+        self.min_alarm.set_text("00")
+        self.min_alarm.set_visibility(True)
+
+        self.min_entry = Gtk.Entry()
+        self.min_entry.set_width_chars(2)
+        self.min_entry.set_max_length(2)
+        self.min_entry.modify_font(Pango.FontDescription(self.font))
+        self.min_entry.set_text("10")
+        self.min_entry.set_visibility(True)
+
+        self.values_label = Gtk.Label()
+        self.values_label.modify_font(Pango.FontDescription(self.font))
+        self.values_label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse("white"))
+        self.values_label.set_text(":")
+        self.values_label.set_justify(Gtk.Justification.CENTER)
+
+        self.sec_entry = Gtk.Entry()
+        self.sec_entry.set_width_chars(2)
+        self.sec_entry.set_max_length(2)
+        self.sec_entry.modify_font(Pango.FontDescription(self.font))
+        self.sec_entry.set_text("00")
+        self.sec_entry.set_visibility(True)
 
         self.draw_clock()
         self.start_timer()
@@ -114,24 +153,20 @@ class MyWindow(Gtk.Window):
     def draw_clock(self):
         self.allow_quit = True
 
-        if self.time_label is None:
-            self.time_label = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            self.time_label.set_homogeneous(False)
-            self.change_time_label_color(self.font_color)
-            self.time_label.modify_font(Pango.FontDescription(self.font))
-
+        if self.label not in self.time_label.get_children():
             self.time_label.pack_start(self.label, expand=True, fill=True, padding=10)
 
-            if self.alarm_set:
-                image = self.alarm_image
+        if self.alarm_set:
+            if self.image not in self.time_label.get_children():
+                self.image = self.alarm_image
                 self.alarm_image.set_tooltip_text(str(self.hh_alarm) + ":" + str(self.mm_alarm))
-            else:
-                image = self.alarm_not_set_image
-                self.alarm_image.set_tooltip_text("")
-            if self.alarm_set:  # Remove this "if" to always show the alarm icon (enabled/disabled)
-                self.time_label.pack_end(image, expand=True, fill=True, padding=0)
-
-            self.add(self.time_label)
+                self.time_label.pack_end(self.image, expand=True, fill=True, padding=0)
+        else:
+            # Change this part to always show the alarm icon (enabled/disabled)
+            if self.image in self.time_label.get_children():
+                # self.image = self.alarm_not_set_image
+                # self.alarm_image.set_tooltip_text("")
+                self.time_label.remove(self.image)
 
         current_time = time.strftime("%H:%M:%S", time.localtime())
         if self.clock_mode:
@@ -139,7 +174,8 @@ class MyWindow(Gtk.Window):
                 self.check_alarm(current_time)
         elif self.counter_set:
             self.check_countdown()
-            current_time = "00:" + str(format(self.minutes, "02d")) + ":" + str(format(self.seconds, "02d"))
+            if self.counter_set:
+                current_time = "00:" + str(format(self.minutes, "02d")) + ":" + str(format(self.seconds, "02d"))
 
         self.label.set_text(current_time)
 
@@ -148,47 +184,21 @@ class MyWindow(Gtk.Window):
         return True
 
     def remove_time_label(self):
-        try:
-            self.time_label.get_parent().remove(self.time_label)
-        except:
-            pass
-        self.time_label = None
+        if self.label in self.time_label.get_children():
+            self.time_label.remove(self.label)
 
     def change_time_label_color(self, font_color="white"):
-        if self.time_label is not None:
-            self.font_color = font_color
-            self.time_label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(font_color))
+        self.font_color = font_color
+        self.time_label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(font_color))
 
     def get_countdown_values(self):
 
         self.stop_timer()
         self.remove_time_label()
 
-        self.entry = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.add(self.entry)
-
-        self.min_entry = Gtk.Entry()
-        self.min_entry.set_width_chars(2)
-        self.min_entry.set_max_length(2)
-        self.min_entry.modify_font(Pango.FontDescription(self.font))
-        self.min_entry.set_text("10")
-        self.entry.pack_start(self.min_entry, expand=True, fill=True, padding=0)
-        self.min_entry.set_visibility(True)
-
-        label = Gtk.Label()
-        label.modify_font(Pango.FontDescription(self.font))
-        label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse("white"))
-        label.set_text(":")
-        label.set_justify(Gtk.Justification.CENTER)
-        self.entry.pack_start(label, expand=True, fill=True, padding=0)
-
-        self.sec_entry = Gtk.Entry()
-        self.sec_entry.set_width_chars(2)
-        self.sec_entry.set_max_length(2)
-        self.sec_entry.modify_font(Pango.FontDescription(self.font))
-        self.sec_entry.set_text("00")
-        self.entry.pack_start(self.sec_entry, expand=True, fill=True, padding=0)
-        self.sec_entry.set_visibility(True)
+        self.time_label.pack_start(self.min_entry, expand=True, fill=True, padding=0)
+        self.time_label.pack_start(self.values_label, expand=True, fill=True, padding=0)
+        self.time_label.pack_start(self.sec_entry, expand=True, fill=True, padding=0)
 
         self.min_entry.grab_focus()
 
@@ -202,72 +212,66 @@ class MyWindow(Gtk.Window):
         self.init_minutes = self.minutes
         self.init_seconds = self.seconds - 1
 
-        self.remove_entry_values()
+        self.remove_counter_values()
         self.draw_clock()
         self.start_timer()
 
     def check_countdown(self):
         if self.seconds == 0:
             if self.minutes == 0:
-                self.beep()
                 self.clock_mode = True
                 self.counter_set = False
-                self.draw_clock()
-                self.start_timer()
+                self.beep()
             else:
                 self.seconds = 59
                 self.minutes -= 1
         else:
             self.seconds -= 1
 
+    def remove_counter_values(self):
+        if self.min_entry in self.time_label.get_children():
+            self.time_label.remove(self.min_entry)
+        if self.values_label in self.time_label.get_children():
+            self.time_label.remove(self.values_label)
+        if self.sec_entry in self.time_label.get_children():
+            self.time_label.remove(self.sec_entry)
+        self.min_entry.set_text("10")
+        self.sec_entry.set_text("00")
+
     def get_alarm_values(self):
 
         self.stop_timer()
         self.remove_time_label()
 
-        self.entry = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.add(self.entry)
-
-        self.hour_alarm = Gtk.Entry()
-        self.hour_alarm.set_width_chars(2)
-        self.hour_alarm.set_max_length(2)
-        self.hour_alarm.modify_font(Pango.FontDescription(self.font))
-        self.hour_alarm.set_text("00")
-        self.entry.pack_start(self.hour_alarm, expand=True, fill=True, padding=0)
-        self.hour_alarm.set_visibility(True)
-
-        label = Gtk.Label()
-        label.modify_font(Pango.FontDescription(self.font))
-        label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse("white"))
-        label.set_text(":")
-        label.set_justify(Gtk.Justification.CENTER)
-        self.entry.pack_start(label, expand=True, fill=True, padding=0)
-
-        self.min_alarm = Gtk.Entry()
-        self.min_alarm.set_width_chars(2)
-        self.min_alarm.set_max_length(2)
-        self.min_alarm.modify_font(Pango.FontDescription(self.font))
-        self.min_alarm.set_text("00")
-        self.entry.pack_start(self.min_alarm, expand=True, fill=True, padding=0)
-        self.min_alarm.set_visibility(True)
+        self.time_label.pack_start(self.hour_alarm, expand=True, fill=True, padding=0)
+        self.time_label.pack_start(self.values_label, expand=True, fill=True, padding=0)
+        self.time_label.pack_start(self.min_alarm, expand=True, fill=True, padding=0)
 
         self.hour_alarm.grab_focus()
 
         self.show_all()
 
     def start_alarm(self):
-        self.remove_entry_values()
+        self.remove_alarm_values()
         self.draw_clock()
         self.start_timer()
 
     def check_alarm(self, current_time):
-        if self.hh_alarm + ":" + self.mm_alarm == current_time[:5]:
-            self.beep()
+        if self.hh_alarm + ":" + self.mm_alarm == current_time[:5] and current_time[-2:] == "00":
             self.clock_mode = True
             self.alarm_set = False
-            self.remove_time_label()
             self.draw_clock()
-            self.start_timer()
+            self.beep()
+
+    def remove_alarm_values(self):
+        if self.hour_alarm in self.time_label.get_children():
+            self.time_label.remove(self.hour_alarm)
+        if self.values_label in self.time_label.get_children():
+            self.time_label.remove(self.values_label)
+        if self.min_alarm in self.time_label.get_children():
+            self.time_label.remove(self.min_alarm)
+        self.hour_alarm.set_text("00")
+        self.min_alarm.set_text("00")
 
     def beep(self):
 
@@ -278,21 +282,14 @@ class MyWindow(Gtk.Window):
         else:
             message = "Don't know what happened nor why you're watching this"
 
-        notification.notify(
+        plyer.notification.notify(
             title='Clock by alef',
             message=message,
             app_icon="resources/clock.ico",
             timeout=5,
         )
 
-        playsound(get_resource_path("resources/beep.wav"))
-
-    def remove_entry_values(self):
-        try:
-            self.entry.get_parent().remove(self.entry)
-        except:
-            pass
-        self.entry = None
+        playsound.playsound(self.beep_sound)
 
     def start_timer(self):
         if self.timer is None:
@@ -302,7 +299,6 @@ class MyWindow(Gtk.Window):
         try:
             GLib.source_remove(self.timer)
         except:
-            # Already removed
             pass
         self.timer = None
 
@@ -327,7 +323,8 @@ class MyWindow(Gtk.Window):
                 self.counter_set = False
                 self.alarm_set = False
                 self.allow_quit = True
-                self.remove_entry_values()
+                self.remove_counter_values()
+                self.remove_alarm_values()
                 self.draw_clock()
                 self.start_timer()
 
@@ -358,7 +355,6 @@ class MyWindow(Gtk.Window):
             self.alarm_set = False
             self.remove_time_label()
             self.draw_clock()
-            self.start_timer()
 
         elif event.keyval == Gdk.keyval_from_name("Return"):    # Return --> Gather Countdown / Alarm values
             if self.counter_set:
