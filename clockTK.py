@@ -67,11 +67,11 @@ class MyWindow(tk.Frame):
 
         # Window attributes
         self.parent.title("Clock by alef")
-        if "Windows" in self.archOS:
-            self.parent.icon(get_resource_path("resources/clock.ico"))
-        else:
-            img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
-            self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
+        # if "Windows" in self.archOS:
+        #     self.parent.iconbitmap(get_resource_path("resources/clock.ico"))
+        # else:
+        img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
+        self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
 
         self.parent.bind('<KeyRelease>', self.on_key_press)
         self.parent.bind('<Button-1>', self.on_enter)
@@ -254,7 +254,7 @@ class MyWindow(tk.Frame):
         if (self.alarm_set or self.counter_set) and new_value.strip():
             try:
                 value = int(new_value)
-                if value < 0 or value > 23:
+                if value < 0 or value > 23 or len(new_value) > 2:
                     self.bell()
                     return False
             except ValueError:
@@ -267,7 +267,7 @@ class MyWindow(tk.Frame):
         if (self.alarm_set or self.counter_set) and new_value.strip():
             try:
                 value = int(new_value)
-                if value < 0 or value > 59:
+                if value < 0 or value > 59 or len(new_value) > 2:
                     self.bell()
                     return False
             except ValueError:
@@ -297,13 +297,14 @@ class MyWindow(tk.Frame):
                         self.parent.overrideredirect(True)
                     else:
                         self.parent.attributes('-type', 'dock')
+                    self.parent.attributes('-topmost', True)
                 else:
                     if "Windows" in self.archOS:
                         self.parent.overrideredirect(False)
                     else:
                         self.parent.attributes('-type', 'normal')
-                        self.parent.resizable(False, False)
-
+                    self.parent.attributes('-topmost', False)
+                self.parent.resizable(False, False)
                 self.decorated = not self.decorated
 
         elif e.keysym in ("a", "A"):  # a, A --> Alarm mode
