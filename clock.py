@@ -11,18 +11,15 @@ I couldn't find anything similar, so I decided to code it!
 Feel free to use it, modify it, distribute it or whatever... just be sure to mention me... well, nothing really. 
 
 *** USAGE:
-MOVE WINDOW:    m or Home+MouseLeft or Alt+F7
+MOVE WINDOW:    Home+MouseLeft (Linux / Unity only)
 QUIT PROGRAM:   Escape
-ALARM           a (set alarm) / s (cancel alarm)
-TIMER:          c (activate counter) / s (stop counter)
-TITLE BAR:      t
-OTHER OPTIONS:  Home+MouseRight
+ALARM           a (set alarm) / s (cancel alarm) - hh:mm
+TIMER:          c (initiate counter) / s (stop counter) - mm:ss
+TITLE BAR:      t (on / off - on Win you will need the title bar to move the clock)
+OTHER OPTIONS:  Home+MouseRight (Linux / Unity only)
 
 *** TRANSPARENT WINDOW BASED ON (Thanks to):
 ZetCode PyCairo tutorial
-
-This code example shows how to create a transparent window.
-
 author: Jan Bodnar
 website: zetcode.com
 last edited: August 2012
@@ -38,14 +35,6 @@ import time
 import plyer
 import playsound
 import threading
-
-
-def get_resource_path(rel_path):
-    """ Thanks to: detly < https://stackoverflow.com/questions/4416336/adding-a-program-icon-in-python-gtk/4416367 > """
-    dir_of_py_file = os.path.dirname(__file__)
-    rel_path_to_resource = os.path.join(dir_of_py_file, rel_path)
-    abs_path_to_resource = os.path.abspath(rel_path_to_resource)
-    return abs_path_to_resource
 
 
 class MyWindow(Gtk.Window):
@@ -64,11 +53,10 @@ class MyWindow(Gtk.Window):
         self.tran_setup()
         self.set_title("Clock by alef")
         self.set_icon_from_file(get_resource_path("resources/clock.ico"))
-        # self.set_size_request(400, 400)  # Not needed. Window will resize automatically
         self.set_resizable(False)          # Comment this if you want a resizable window (text size will not change)
         if "Linux" in self.archOS:
-            self.set_decorated(False)      # On windows you need the title bar to move the window
-        self.set_keep_above(True)          # Comment to avoid "always on top" behavior (or Home+Right-Mouse while running)
+            self.set_decorated(False)      # On windows you'll need the title bar to move the window
+        self.set_keep_above(True)          # Comment to avoid "always on top" behavior
         self.set_position(Gtk.WindowPosition.CENTER)
 
         self.clock_mode = True
@@ -78,7 +66,12 @@ class MyWindow(Gtk.Window):
         self.time_label = None
         self.font = "light 40"
         self.font_color = "white"
-        self.tooltip = "MOVE:    Home+MouseLeft\nQUIT:        Escape\nALARM:   a / s\nTIMER:     c / s\nTITLE:       t\nOTHER:    Home+MouseRight"
+        self.tooltip = "MOVE:    Home+MouseLeft\n" \
+                       "QUIT:        Escape\n" \
+                       "ALARM:  a / s (hh:mm)\n" \
+                       "TIMER:     c / s (mm:ss)\n" \
+                       "TITLE:       t\n" \
+                       "OTHER:    Home+MouseRight"
         self.minutes = 5
         self.init_minutes = 5
         self.init_seconds = 0
@@ -88,7 +81,6 @@ class MyWindow(Gtk.Window):
         self.mm_alarm = ""
         self.timer = None
         self.beep_sound = get_resource_path("resources/beep.wav")
-        self.P = None
 
         self.time_label = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         self.time_label.set_homogeneous(False)
@@ -193,7 +185,6 @@ class MyWindow(Gtk.Window):
         self.time_label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(font_color))
 
     def get_countdown_values(self):
-
         self.stop_timer()
         self.remove_time_label()
 
@@ -206,16 +197,24 @@ class MyWindow(Gtk.Window):
         self.show_all()
 
     def start_countdown(self, minutes, seconds):
+        self.init_minutes = minutes
+        self.init_seconds = seconds
         self.minutes = int(minutes)
         self.seconds = int(seconds) + 1
-        if self.seconds > 59:
-            self.seconds = 59
-        self.init_minutes = self.minutes
-        self.init_seconds = self.seconds - 1
 
         self.remove_counter_values()
         self.draw_clock()
         self.start_timer()
+
+    def remove_counter_values(self):
+        if self.min_entry in self.time_label.get_children():
+            self.time_label.remove(self.min_entry)
+        if self.values_label in self.time_label.get_children():
+            self.time_label.remove(self.values_label)
+        if self.sec_entry in self.time_label.get_children():
+            self.time_label.remove(self.sec_entry)
+        self.min_entry.set_text("10")
+        self.sec_entry.set_text("00")
 
     def check_countdown(self):
         if self.seconds == 0:
@@ -228,21 +227,10 @@ class MyWindow(Gtk.Window):
         else:
             self.seconds -= 1
 
-        if self.seconds == 0 and self.minutes == 0 and self.counter_set:
-            self.notify()
-
-    def remove_counter_values(self):
-        if self.min_entry in self.time_label.get_children():
-            self.time_label.remove(self.min_entry)
-        if self.values_label in self.time_label.get_children():
-            self.time_label.remove(self.values_label)
-        if self.sec_entry in self.time_label.get_children():
-            self.time_label.remove(self.sec_entry)
-        self.min_entry.set_text("10")
-        self.sec_entry.set_text("00")
+        if self.minutes == 0 and self.seconds == 0 and self.counter_set:
+            self.beep()
 
     def get_alarm_values(self):
-
         self.stop_timer()
         self.remove_time_label()
 
@@ -259,12 +247,6 @@ class MyWindow(Gtk.Window):
         self.draw_clock()
         self.start_timer()
 
-    def check_alarm(self, current_time):
-        if self.hh_alarm + ":" + self.mm_alarm == current_time[:5] and current_time[-2:] == "00":
-            self.notify()
-            self.clock_mode = True
-            self.alarm_set = False
-
     def remove_alarm_values(self):
         if self.hour_alarm in self.time_label.get_children():
             self.time_label.remove(self.hour_alarm)
@@ -275,26 +257,22 @@ class MyWindow(Gtk.Window):
         self.hour_alarm.set_text("00")
         self.min_alarm.set_text("00")
 
-    def notify(self):
+    def check_alarm(self, current_time):
+        if self.hh_alarm + ":" + self.mm_alarm == current_time[:5] and current_time[-2:] == "00":
+            self.beep()
+            self.clock_mode = True
+            self.alarm_set = False
+
+    def beep(self):
         if self.alarm_set:
             message = "Your alarm time has arrived!!!"
         elif self.counter_set:
-            message = "Your countdown for %02d:%02d finished!!!" % (self.init_minutes, self.init_seconds)
+            message = "Your countdown for %s:%s finished!!!" % (self.init_minutes, self.init_seconds)
         else:
-            message = "Don't know what happened nor why you're watching this"
+            message = "Oops, don't know why you're watching this. Likely, something went wrong :("
 
-        plyer.notification.notify(
-            title='Clock by alef',
-            message=message,
-            app_icon="resources/clock.ico",
-            timeout=5,
-        )
-
-        t = threading.Thread(target=self.beep)
+        t = threading.Thread(target=notify, args=(message, self.beep_sound))
         t.start()
-
-    def beep(self):
-        playsound.playsound(self.beep_sound)
 
     def start_timer(self):
         if self.timer is None:
@@ -323,11 +301,13 @@ class MyWindow(Gtk.Window):
                 Gtk.main_quit()
             else:
                 self.clock_mode = True
-                self.counter_set = False
-                self.alarm_set = False
+                if self.counter_set:
+                    self.counter_set = False
+                    self.remove_counter_values()
+                if self.alarm_set:
+                    self.alarm_set = False
+                    self.remove_alarm_values()
                 self.allow_quit = True
-                self.remove_counter_values()
-                self.remove_alarm_values()
                 self.draw_clock()
                 self.start_timer()
 
@@ -372,7 +352,7 @@ class MyWindow(Gtk.Window):
                     self.sec_entry.set_text("")
                     self.sec_entry.grab_focus()
                     proceed = False
-                if proceed:
+                if proceed and (int(minutes) != 0 or int(seconds) != 0):
                     self.start_countdown(minutes, seconds)
             elif self.alarm_set:
                 proceed = True
@@ -387,7 +367,30 @@ class MyWindow(Gtk.Window):
                     self.min_alarm.grab_focus()
                     proceed = False
                 if proceed:
+                    self.hh_alarm = str(format(int(self.hh_alarm), "02d"))
+                    self.mm_alarm = str(format(int(self.mm_alarm), "02d"))
                     self.start_alarm()
+
+
+def get_resource_path(rel_path):
+    """ Thanks to: detly < https://stackoverflow.com/questions/4416336/adding-a-program-icon-in-python-gtk/4416367 > """
+    dir_of_py_file = os.path.dirname(__file__)
+    rel_path_to_resource = os.path.join(dir_of_py_file, rel_path)
+    abs_path_to_resource = os.path.abspath(rel_path_to_resource)
+    return abs_path_to_resource
+
+
+def notify(message, sound):
+    if message is not None:
+        plyer.notification.notify(
+            title='Clock by alef',
+            message=message,
+            app_icon="resources/clock.ico",
+            timeout=5,
+        )
+
+    if sound is not None:
+        playsound.playsound(sound)
 
 
 def main():
@@ -396,8 +399,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("")
-        exit()
+    main()
