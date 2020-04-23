@@ -50,8 +50,8 @@ class MyWindow(tk.Frame):
         self.font_size = int(38 * (self.parent.winfo_screenwidth() / 1920))
         self.font_color = "white"
         self.tooltip = "MOVE:    Home+MouseLeft\n" \
-                       "QUIT:       Escape\n" \
-                       "ALARM:  a / s (hh:mm)\n" \
+                       "QUIT:      Escape\n" \
+                       "ALARM:   a / s (hh:mm)\n" \
                        "TIMER:     c / s (mm:ss)\n" \
                        "TITLE:       t\n" \
                        "OTHER:    Home+MouseRight"
@@ -66,14 +66,17 @@ class MyWindow(tk.Frame):
         self.beep_sound = get_resource_path("resources/beep.wav")
 
         # Window attributes
-        self.parent.geometry('+%d+%d' % (self.parent.winfo_screenwidth()/2, 50))
         self.parent.title("Clock by alef")
         if "Windows" in self.archOS:
             self.parent.icon(get_resource_path("resources/clock.ico"))
         else:
             img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
             self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
+
         self.parent.bind('<KeyRelease>', self.on_key_press)
+        self.parent.bind('<Button-1>', self.on_enter)
+        self.parent.bind('<Button-2>', self.on_enter)
+
         self.parent.wait_visibility(self.parent)
         self.parent.configure(bg=self.bg_color)
         self.parent.wm_attributes("-alpha", 0.6)
@@ -81,15 +84,12 @@ class MyWindow(tk.Frame):
             self.parent.overrideredirect(True)
             self.parent.attributes('-topmost', True)
             self.parent.resizable(False, False)
-            Ygap = 0
         else:
             self.parent.attributes("-type", "dock")
-            Ygap = 50
 
         # Widgets
         self.label = tk.Label(self.parent, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
         tt.Tooltip(self.label, text=self.tooltip)
-        self.label.grid(row=0, column=0)
 
         img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_set.png"))
         self.alarm_image = tk.Label(image=img, bg=self.bg_color)
@@ -246,6 +246,9 @@ class MyWindow(tk.Frame):
 
         t = threading.Thread(target=notify, args=(message, self.beep_sound))
         t.start()
+
+    def on_enter(self, e):
+        e.widget.focus_force()
 
     def on_validate_hour(self, new_value):
         if (self.alarm_set or self.counter_set) and new_value.strip():

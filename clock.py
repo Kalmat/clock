@@ -103,6 +103,7 @@ class MyWindow(Gtk.Window):
         self.hour_alarm.set_max_length(2)
         self.hour_alarm.modify_font(Pango.FontDescription(self.font))
         self.hour_alarm.set_text("00")
+        self.label.set_tooltip_text("Enter hours (HH)")
         self.hour_alarm.set_visibility(True)
 
         self.min_alarm = Gtk.Entry()
@@ -110,6 +111,7 @@ class MyWindow(Gtk.Window):
         self.min_alarm.set_max_length(2)
         self.min_alarm.modify_font(Pango.FontDescription(self.font))
         self.min_alarm.set_text("00")
+        self.label.set_tooltip_text("Enter minutes (MM)")
         self.min_alarm.set_visibility(True)
 
         self.min_entry = Gtk.Entry()
@@ -117,6 +119,7 @@ class MyWindow(Gtk.Window):
         self.min_entry.set_max_length(2)
         self.min_entry.modify_font(Pango.FontDescription(self.font))
         self.min_entry.set_text("10")
+        self.label.set_tooltip_text("Enter minutes (MM)")
         self.min_entry.set_visibility(True)
 
         self.values_label = Gtk.Label()
@@ -130,6 +133,7 @@ class MyWindow(Gtk.Window):
         self.sec_entry.set_max_length(2)
         self.sec_entry.modify_font(Pango.FontDescription(self.font))
         self.sec_entry.set_text("00")
+        self.label.set_tooltip_text("Enter seconds (SS)")
         self.sec_entry.set_visibility(True)
 
         self.draw_clock()
