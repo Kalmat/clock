@@ -41,6 +41,7 @@ class MyWindow(tk.Frame):
         self.timer = None
         self.gathering_values = False
         self.decorated = False
+        self.clock_mode = True
         self.allow_quit = True
         self.alarm_set = False
         self.counter_set = False
@@ -49,12 +50,11 @@ class MyWindow(tk.Frame):
         self.font = "Helvetica"
         self.font_size = int(38 * (self.parent.winfo_screenwidth() / 1920))
         self.font_color = "white"
-        self.tooltip = "MOVE:    Home+MouseLeft\n" \
+        self.tooltip = "Click on clock to enter a command:\n" \
                        "QUIT:      Escape\n" \
                        "ALARM:   a / s (hh:mm)\n" \
-                       "TIMER:     c / s (mm:ss)\n" \
-                       "TITLE:       t\n" \
-                       "OTHER:    Home+MouseRight"
+                       "TIMER:    c / s (mm:ss)\n" \
+                       "TITLE:      t"
         self.minutes = 10
         self.init_minutes = 10
         self.init_seconds = 0
@@ -65,6 +65,15 @@ class MyWindow(tk.Frame):
         self.timer = None
         self.beep_sound = get_resource_path("resources/beep.wav")
 
+        # Event bindings
+        self.parent.bind('<KeyRelease>', self.on_key_press)
+        self.parent.bind('<Button-1>', self.on_enter)
+        self.parent.bind('<Button-2>', self.on_enter)
+
+        # Entry validation functions
+        self.vcmd_hour = (self.register(self.on_validate_hour), "%P")
+        self.vcmd_min_sec = (self.register(self.on_validate_min_sec), "%P")
+
         # Window attributes
         self.parent.title("Clock by alef")
         # if "Windows" in self.archOS:
@@ -72,10 +81,6 @@ class MyWindow(tk.Frame):
         # else:
         img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
         self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
-
-        self.parent.bind('<KeyRelease>', self.on_key_press)
-        self.parent.bind('<Button-1>', self.on_enter)
-        self.parent.bind('<Button-2>', self.on_enter)
 
         self.parent.wait_visibility(self.parent)
         self.parent.configure(bg=self.bg_color)
@@ -101,25 +106,21 @@ class MyWindow(tk.Frame):
         self.alarm_not_set_image.image = img
 
         self.get_hour = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
-        self.vcmd_hour = (self.register(self.on_validate_hour), "%P")
-        self.get_hour.configure(validate="key", validatecommand=self.vcmd_hour)
         tt.Tooltip(self.get_hour, text="Enter hours (HH)")
 
         self.values_label = tk.Label(self.parent, bg=self.bg_color, text=":", font=(self.font, self.font_size), fg=self.font_color)
 
         self.get_min = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
-        self.vcmd_min_sec = (self.register(self.on_validate_min_sec), "%P")
-        self.get_min.configure(validate="key", validatecommand=self.vcmd_min_sec)
         tt.Tooltip(self.get_min, text="Enter minutes (MM)")
 
         self.get_sec = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
-        self.get_sec.configure(validate="key", validatecommand=self.vcmd_min_sec)
         tt.Tooltip(self.get_sec, text="Enter seconds (SS)")
 
         # Start program loop
         self.draw_clock()
 
     def draw_clock(self):
+        self.clock_mode = True
         self.allow_quit = True
 
         current_time = time.strftime("%H:%M:%S")
@@ -149,14 +150,15 @@ class MyWindow(tk.Frame):
             self.label.grid_remove()
 
     def stop_timer(self):
-        self.parent.after_cancel(self.timer)
-        self.timer = None
+        if self.timer:
+            self.parent.after_cancel(self.timer)
+            self.timer = None
 
     def get_alarm_values(self):
-        self.get_hour.configure(validate="key", validatecommand=self.vcmd_hour)
-        self.get_min.configure(validate="key", validatecommand=self.vcmd_min_sec)
+        self.set_key_validators(on=True)
         self.remove_time_label()
         self.stop_timer()
+        self.clock_mode = False
 
         self.get_hour.delete(0, 'end')
         self.get_hour.insert(0, '00')
@@ -174,10 +176,9 @@ class MyWindow(tk.Frame):
         self.get_hour.grid_remove()
         self.values_label.grid_remove()
         self.get_min.grid_remove()
+        self.set_key_validators(on=False)
 
     def start_alarm(self):
-        self.get_hour.configure(validate="key", validatecommand="")
-        self.get_min.configure(validate="key", validatecommand="")
         self.remove_alarm_values()
         self.draw_clock()
 
@@ -187,11 +188,10 @@ class MyWindow(tk.Frame):
             self.alarm_set = False
 
     def get_counter_values(self):
-        self.get_min.configure(validate="key", validatecommand=self.vcmd_min_sec)
-        self.get_sec.configure(validate="key", validatecommand=self.vcmd_min_sec)
-
+        self.set_key_validators(on=True)
         self.remove_time_label()
         self.stop_timer()
+        self.clock_mode = False
 
         self.get_min.delete(0, 'end')
         self.get_min.insert(0, '10')
@@ -209,11 +209,9 @@ class MyWindow(tk.Frame):
         self.get_min.grid_remove()
         self.values_label.grid_remove()
         self.get_sec.grid_remove()
+        self.set_key_validators(on=False)
 
     def start_counter(self, minutes, seconds):
-        self.get_min.configure(validate="key", validatecommand="")
-        self.get_sec.configure(validate="key", validatecommand="")
-
         self.remove_counter_values()
 
         self.init_minutes = minutes
@@ -250,8 +248,18 @@ class MyWindow(tk.Frame):
     def on_enter(self, e):
         e.widget.focus_force()
 
+    def set_key_validators(self, on=True):
+        if on:
+            self.get_hour.configure(validate="key", validatecommand=self.vcmd_hour)
+            self.get_min.configure(validate="key", validatecommand=self.vcmd_min_sec)
+            self.get_sec.configure(validate="key", validatecommand=self.vcmd_min_sec)
+        else:
+            self.get_hour.configure(validate="key", validatecommand="")
+            self.get_min.configure(validate="key", validatecommand="")
+            self.get_sec.configure(validate="key", validatecommand="")
+
     def on_validate_hour(self, new_value):
-        if (self.alarm_set or self.counter_set) and new_value.strip():
+        if not self.clock_mode and new_value.strip():
             try:
                 value = int(new_value)
                 if value < 0 or value > 23 or len(new_value) > 2:
@@ -264,7 +272,7 @@ class MyWindow(tk.Frame):
         return True
 
     def on_validate_min_sec(self, new_value):
-        if (self.alarm_set or self.counter_set) and new_value.strip():
+        if not self.clock_mode and new_value.strip():
             try:
                 value = int(new_value)
                 if value < 0 or value > 59 or len(new_value) > 2:
@@ -291,7 +299,7 @@ class MyWindow(tk.Frame):
                 self.draw_clock()
 
         elif e.keysym in ("t", "T"):         # t, T --> Add / Remove TITLE BAR
-            if not self.alarm_set and not self.counter_set:
+            if self.clock_mode:
                 if self.decorated:
                     if "Windows" in self.archOS:
                         self.parent.overrideredirect(True)
@@ -308,20 +316,21 @@ class MyWindow(tk.Frame):
                 self.decorated = not self.decorated
 
         elif e.keysym in ("a", "A"):  # a, A --> Alarm mode
-            if not self.alarm_set and not self.counter_set:
+            if self.clock_mode:
                 self.alarm_set = True
                 self.allow_quit = False
                 self.get_alarm_values()
 
         elif e.keysym in ("c", "C"):         # c, C --> Counter mode
-            if not self.alarm_set and not self.counter_set:
+            if self.clock_mode:
                 self.counter_set = True
                 self.allow_quit = False
                 self.get_counter_values()
 
         elif e.keysym in ("s", "S"):         # s, S --> STOP Countdown / Alarm
-            self.counter_set = False
-            self.alarm_set = False
+            if self.clock_mode:
+                self.counter_set = False
+                self.alarm_set = False
 
         elif e.keysym == "Return":    # Return --> Gather Countdown / Alarm values
             if self.alarm_set:
