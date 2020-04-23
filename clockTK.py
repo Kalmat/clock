@@ -42,7 +42,6 @@ class MyWindow(tk.Frame):
         self.gathering_values = False
         self.decorated = False
         self.clock_mode = True
-        self.allow_quit = True
         self.alarm_set = False
         self.counter_set = False
         self.time_label = None
@@ -121,7 +120,6 @@ class MyWindow(tk.Frame):
 
     def draw_clock(self):
         self.clock_mode = True
-        self.allow_quit = True
 
         current_time = time.strftime("%H:%M:%S")
         if self.alarm_set:
@@ -286,7 +284,7 @@ class MyWindow(tk.Frame):
 
     def on_key_press(self, e):
         if e.keysym == "Escape":      # Escape --> QUIT
-            if self.allow_quit:
+            if self.clock_mode:
                 self.parent.destroy()
             else:
                 if self.counter_set:
@@ -295,7 +293,6 @@ class MyWindow(tk.Frame):
                 if self.alarm_set:
                     self.alarm_set = False
                     self.remove_alarm_values()
-                self.allow_quit = True
                 self.draw_clock()
 
         elif e.keysym in ("t", "T"):         # t, T --> Add / Remove TITLE BAR
@@ -318,19 +315,19 @@ class MyWindow(tk.Frame):
         elif e.keysym in ("a", "A"):  # a, A --> Alarm mode
             if self.clock_mode:
                 self.alarm_set = True
-                self.allow_quit = False
                 self.get_alarm_values()
 
         elif e.keysym in ("c", "C"):         # c, C --> Counter mode
             if self.clock_mode:
                 self.counter_set = True
-                self.allow_quit = False
                 self.get_counter_values()
 
         elif e.keysym in ("s", "S"):         # s, S --> STOP Countdown / Alarm
             if self.clock_mode:
                 self.counter_set = False
                 self.alarm_set = False
+                self.stop_timer()
+                self.draw_clock()
 
         elif e.keysym == "Return":    # Return --> Gather Countdown / Alarm values
             if self.alarm_set:
