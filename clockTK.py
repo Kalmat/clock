@@ -54,12 +54,12 @@ class MyWindow(tk.Toplevel):
 
         # General variables
         self.archOS = platform.system()
-        self.timer = None
+        self.callback_job = None
         self.gathering_values = False
         self.decorated = False
         self.clock_mode = True
         self.alarm_set = False
-        self.counter_set = False
+        self.timer_set = False
         self.time_label = None
         self.bg_color = "gray19"
         self.font = "Helvetica"
@@ -69,7 +69,7 @@ class MyWindow(tk.Toplevel):
                        "QUIT:\tEscape\n" \
                        "ALARM:\ta (hh:mm)\n" \
                        "TIMER:\tt (mm:ss)\n" \
-                       "STOP:\ts (alarm/timer)\n" \
+                       "STOP:\ts (alarm / timer)\n" \
                        "MOVE:\tMouse Button-1"
         self.minutes = 10
         self.init_minutes = 10
@@ -78,13 +78,10 @@ class MyWindow(tk.Toplevel):
         self.time_label = None
         self.hh_alarm = ""
         self.mm_alarm = ""
-        self.timer = None
+        self.callback_job = None
         self.beep_sound = get_resource_path("resources/beep.wav")
-
-        # Event bindings
-        self.bind('<KeyRelease>', self.on_key_press)
-        self.bind('<Button-1>', self.on_enter)
-        self.bind('<Button-2>', self.on_enter)
+        self.mouse_X_pos = 0
+        self.mouse_Y_pos = 0
 
         # Entry validation functions
         self.vcmd_hour = (self.register(self.on_validate_hour), "%P")
@@ -103,7 +100,6 @@ class MyWindow(tk.Toplevel):
         # Widgets
         self.label = tk.Label(self, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
         tt.Tooltip(self.label, text=self.tooltip)
-        self.label.bind('<B1-Motion>', self.on_motion)
 
         img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_set.png"))
         self.alarm_image = tk.Label(self, image=img, bg=self.bg_color)
@@ -126,6 +122,14 @@ class MyWindow(tk.Toplevel):
         self.get_sec = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
         tt.Tooltip(self.get_sec, text="Enter seconds (SS)")
 
+        # Event bindings
+        self.bind('<KeyRelease>', self.on_key_press)
+        self.bind('<Button-1>', self.on_enter)
+        self.bind('<Button-2>', self.on_enter)
+        self.label.bind('<B1-Motion>', self.on_motion)
+        self.label.bind('<Button-1>', self.on_button_click)
+        self.label.bind('<ButtonRelease-1>', self.on_button_release)
+
         # Start program loop
         self.draw_clock()
 
@@ -135,9 +139,9 @@ class MyWindow(tk.Toplevel):
         current_time = time.strftime("%H:%M:%S")
         if self.alarm_set:
             self.check_alarm(current_time)
-        elif self.counter_set:
-            self.check_counter()
-            if self.counter_set:
+        elif self.timer_set:
+            self.check_timer()
+            if self.timer_set:
                 current_time = "00:" + str(format(self.minutes, "02d")) + ":" + str(format(self.seconds, "02d"))
         self.label.configure(text=current_time)
 
@@ -152,29 +156,29 @@ class MyWindow(tk.Toplevel):
             if self.alarm_image.grid_info():
                 self.alarm_image.grid_remove()
 
-        self.timer = self.after(1000 - int(divmod(time.time(), 1)[1] * 1000), self.draw_clock)
+        self.callback_job = self.after(1000 - int(divmod(time.time(), 1)[1] * 1000), self.draw_clock)
 
     def remove_time_label(self):
         if self.label.grid_info():
             self.label.grid_remove()
 
-    def stop_timer(self):
-        if self.timer:
-            self.after_cancel(self.timer)
-            self.timer = None
+    def stop_callback(self):
+        if self.callback_job:
+            self.after_cancel(self.callback_job)
+            self.callback_job = None
 
     def get_alarm_values(self):
         self.set_key_validators(on=True)
         self.remove_time_label()
-        self.stop_timer()
+        self.stop_callback()
         self.clock_mode = False
 
         self.get_hour.delete(0, 'end')
-        self.get_hour.insert(0, '00')
+        self.get_hour.insert(0, time.strftime("%H"))
         self.get_hour.grid(row=0, column=0)
         self.values_label.grid(row=0, column=1)
         self.get_min.delete(0, 'end')
-        self.get_min.insert(0, '00')
+        self.get_min.insert(0, time.strftime("%M"))
         self.get_min.grid(row=0, column=2)
 
         self.get_hour.select_range(0, 'end')
@@ -196,10 +200,10 @@ class MyWindow(tk.Toplevel):
             self.beep()
             self.alarm_set = False
 
-    def get_counter_values(self):
+    def get_timer_values(self):
         self.set_key_validators(on=True)
         self.remove_time_label()
-        self.stop_timer()
+        self.stop_callback()
         self.clock_mode = False
 
         self.get_min.delete(0, 'end')
@@ -214,14 +218,14 @@ class MyWindow(tk.Toplevel):
         self.get_min.icursor('end')
         self.get_min.focus_force()
 
-    def remove_counter_values(self):
+    def remove_timer_values(self):
         self.get_min.grid_remove()
         self.values_label.grid_remove()
         self.get_sec.grid_remove()
         self.set_key_validators(on=False)
 
-    def start_counter(self, minutes, seconds):
-        self.remove_counter_values()
+    def start_timer(self, minutes, seconds):
+        self.remove_timer_values()
 
         self.init_minutes = minutes
         self.init_seconds = seconds
@@ -230,23 +234,23 @@ class MyWindow(tk.Toplevel):
 
         self.draw_clock()
 
-    def check_counter(self):
+    def check_timer(self):
         if self.seconds == 0:
             if self.minutes == 0:
-                self.counter_set = False
+                self.timer_set = False
             else:
                 self.seconds = 59
                 self.minutes -= 1
         else:
             self.seconds -= 1
 
-        if self.minutes == 0 and self.seconds == 0 and self.counter_set:
+        if self.minutes == 0 and self.seconds == 0 and self.timer_set:
             self.beep()
 
     def beep(self):
         if self.alarm_set:
             message = "Your alarm time has arrived!!!"
-        elif self.counter_set:
+        elif self.timer_set:
             message = "Your countdown for %s:%s finished!!!" % (self.init_minutes, self.init_seconds)
         else:
             message = "Oops, don't know why you're watching this. Likely, something went wrong :("
@@ -256,6 +260,17 @@ class MyWindow(tk.Toplevel):
 
     def on_enter(self, e):
         e.widget.focus_force()
+
+    def on_motion(self, e):
+        self.geometry('+{0}+{1}'.format(e.x_root - self.mouse_X_pos, e.y_root - self.mouse_Y_pos))
+
+    def on_button_click(self, e):
+        self.mouse_X_pos = e.x
+        self.mouse_Y_pos = e.y
+
+    def on_button_release(self, e):
+        self.mouse_X_pos = 0
+        self.mouse_Y_pos = 0
 
     def set_key_validators(self, on=True):
         if on:
@@ -293,17 +308,14 @@ class MyWindow(tk.Toplevel):
 
         return True
 
-    def on_motion(self, event):
-        self.geometry('+{0}+{1}'.format(event.x_root, event.y_root))
-
     def on_key_press(self, e):
         if e.keysym == "Escape":            # Escape --> QUIT
             if self.clock_mode:
                 self.master.destroy()
             else:
-                if self.counter_set:
-                    self.counter_set = False
-                    self.remove_counter_values()
+                if self.timer_set:
+                    self.timer_set = False
+                    self.remove_timer_values()
                 if self.alarm_set:
                     self.alarm_set = False
                     self.remove_alarm_values()
@@ -316,26 +328,30 @@ class MyWindow(tk.Toplevel):
 
         elif e.keysym in ("t", "T"):         # t, T --> Timer mode
             if self.clock_mode:
-                self.counter_set = True
-                self.get_counter_values()
+                self.timer_set = True
+                self.get_timer_values()
 
         elif e.keysym in ("s", "S"):         # s, S --> STOP Countdown / Alarm
             if self.clock_mode:
-                self.counter_set = False
+                self.timer_set = False
                 self.alarm_set = False
-                self.stop_timer()
+                self.stop_callback()
                 self.draw_clock()
+
+        # elif e.keysym in ("m", "M"):         # m, M --> Minimize / Maximize
+        #     if self.clock_mode:
+        #         self.iconify()
 
         elif e.keysym == "Return":          # Return --> Gather Countdown / Alarm values
             if self.alarm_set:
                 self.hh_alarm = str(format(int(self.get_hour.get()), "02d"))
                 self.mm_alarm = str(format(int(self.get_min.get()), "02d"))
                 self.start_alarm()
-            elif self.counter_set:
+            elif self.timer_set:
                 minutes = self.get_min.get()
                 seconds = self.get_sec.get()
                 if int(minutes) != 0 or int(seconds) != 0:
-                    self.start_counter(minutes, seconds)
+                    self.start_timer(minutes, seconds)
 
 
 def get_resource_path(rel_path):
