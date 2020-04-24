@@ -4,19 +4,18 @@
 __version__ = "3.0.0"
 
 """
-********* TRANSPARENT CLOCK by alef ********* 
+********* TRANSPARENT CLOCK by alef *********
 This is just a transparent, always-on-top, movable, count-down/alarm digital clock
 
 I couldn't find anything similar, so I decided to code it!
-Feel free to use it, modify it, distribute it or whatever... just be sure to mention me... well, nothing really. 
+Feel free to use it, modify it, distribute it or whatever... just be sure to mention me... well, nothing really.
 
 *** USAGE:
-MOVE WINDOW:    Home+MouseLeft (Linux / Unity only)
-QUIT PROGRAM:   Escape
-ALARM           a (set alarm) / s (cancel alarm) - hh:mm
-TIMER:          c (initiate counter) / s (stop counter) - mm:ss
-TITLE BAR:      t (on / off - on Win you will need the title bar to move the clock)
-OTHER OPTIONS:  Home+MouseRight (Linux / Unity only)
+QUIT PROGRAM:       Escape
+SET ALARM:          a / A (hh:mm)
+SET TIMER:          t / T (mm:ss)
+STOP ALARM/TIMER:   s / S
+MOVE WINDOW:        Mouse Button-1
 """
 
 import platform
@@ -30,11 +29,28 @@ import threading
 import tktooltip as tt
 
 
-class MyWindow(tk.Frame):
+class FakeRoot(tk.Tk):
+    # (Author: noob oddy) https://stackoverflow.com/questions/4066027/making-tkinter-windows-show-up-in-the-taskbar
 
-    def __init__(self, parent, *args, **kwargs):
-        tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.parent = parent
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self.title("Clock by alef")
+        self.wm_title("Clock by alef")
+        img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
+        self.tk.call('wm', 'iconphoto', self._w, img)
+        self.wait_visibility(self)
+        self.configure(bg="black")
+        self.attributes('-alpha', 0.0)
+        self.geometry("1x1+0+0")
+        self.lower()
+        self.iconify()
+
+
+class MyWindow(tk.Toplevel):
+
+    def __init__(self, master, *args, **kwargs):
+        tk.Toplevel.__init__(self, master, *args, **kwargs)
+        self.master = master
 
         # General variables
         self.archOS = platform.system()
@@ -47,13 +63,14 @@ class MyWindow(tk.Frame):
         self.time_label = None
         self.bg_color = "gray19"
         self.font = "Helvetica"
-        self.font_size = int(38 * (self.parent.winfo_screenwidth() / 1920))
+        self.font_size = int(38 * (self.winfo_screenwidth() / 1920))
         self.font_color = "white"
         self.tooltip = "Click on clock to enter a command:\n" \
-                       "QUIT:      Escape\n" \
-                       "ALARM:   a / s (hh:mm)\n" \
-                       "TIMER:    c / s (mm:ss)\n" \
-                       "TITLE:      t"
+                       "QUIT:\tEscape\n" \
+                       "ALARM:\ta (hh:mm)\n" \
+                       "TIMER:\tt (mm:ss)\n" \
+                       "STOP:\ts (alarm/timer)\n" \
+                       "MOVE:\tMouse Button-1"
         self.minutes = 10
         self.init_minutes = 10
         self.init_seconds = 0
@@ -65,54 +82,48 @@ class MyWindow(tk.Frame):
         self.beep_sound = get_resource_path("resources/beep.wav")
 
         # Event bindings
-        self.parent.bind('<KeyRelease>', self.on_key_press)
-        self.parent.bind('<Button-1>', self.on_enter)
-        self.parent.bind('<Button-2>', self.on_enter)
+        self.bind('<KeyRelease>', self.on_key_press)
+        self.bind('<Button-1>', self.on_enter)
+        self.bind('<Button-2>', self.on_enter)
 
         # Entry validation functions
         self.vcmd_hour = (self.register(self.on_validate_hour), "%P")
         self.vcmd_min_sec = (self.register(self.on_validate_min_sec), "%P")
 
-        # Window attributes
-        self.parent.title("Clock by alef")
-        # if "Windows" in self.archOS:
-        #     self.parent.iconbitmap(get_resource_path("resources/clock.ico"))
-        # else:
-        img = ImageTk.PhotoImage(file=get_resource_path("resources/clock.ico"))
-        self.parent.tk.call('wm', 'iconphoto', self.parent._w, img)
-
-        self.parent.wait_visibility(self.parent)
-        self.parent.configure(bg=self.bg_color)
-        self.parent.wm_attributes("-alpha", 0.6)
+        self.wait_visibility(self)
+        self.configure(bg=self.bg_color)
+        self.wm_attributes("-alpha", 0.6)
         if "Windows" in self.archOS:
-            self.parent.overrideredirect(True)
-            self.parent.attributes('-topmost', True)
-            self.parent.resizable(False, False)
+            self.overrideredirect(True)
+            self.attributes('-topmost', True)
+            self.resizable(False, False)
         else:
-            self.parent.attributes("-type", "dock")
+            self.attributes("-type", "dock")
 
         # Widgets
-        self.label = tk.Label(self.parent, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
+        self.label = tk.Label(self, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
         tt.Tooltip(self.label, text=self.tooltip)
+        self.label.bind('<B1-Motion>', self.on_motion)
 
         img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_set.png"))
-        self.alarm_image = tk.Label(image=img, bg=self.bg_color)
+        self.alarm_image = tk.Label(self, image=img, bg=self.bg_color)
         self.alarm_image.image = img
         self.alarm_tt = tt.Tooltip(self.alarm_image, text="")
 
-        img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_not_set.png"))
-        self.alarm_not_set_image = tk.Label(image=img, bg=self.bg_color)
-        self.alarm_not_set_image.image = img
+        # Not used at the moment
+        # img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_not_set.png"))
+        # self.alarm_not_set_image = tk.Label(image=img, bg=self.bg_color)
+        # self.alarm_not_set_image.image = img
 
-        self.get_hour = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
+        self.get_hour = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
         tt.Tooltip(self.get_hour, text="Enter hours (HH)")
 
-        self.values_label = tk.Label(self.parent, bg=self.bg_color, text=":", font=(self.font, self.font_size), fg=self.font_color)
+        self.values_label = tk.Label(self, bg=self.bg_color, text=":", font=(self.font, self.font_size), fg=self.font_color)
 
-        self.get_min = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
+        self.get_min = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
         tt.Tooltip(self.get_min, text="Enter minutes (MM)")
 
-        self.get_sec = tk.Entry(font=self.font+" "+str(self.font_size), width=2)
+        self.get_sec = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
         tt.Tooltip(self.get_sec, text="Enter seconds (SS)")
 
         # Start program loop
@@ -141,7 +152,7 @@ class MyWindow(tk.Frame):
             if self.alarm_image.grid_info():
                 self.alarm_image.grid_remove()
 
-        self.timer = self.parent.after(1000 - int(divmod(time.time(), 1)[1] * 1000), self.draw_clock)
+        self.timer = self.after(1000 - int(divmod(time.time(), 1)[1] * 1000), self.draw_clock)
 
     def remove_time_label(self):
         if self.label.grid_info():
@@ -149,7 +160,7 @@ class MyWindow(tk.Frame):
 
     def stop_timer(self):
         if self.timer:
-            self.parent.after_cancel(self.timer)
+            self.after_cancel(self.timer)
             self.timer = None
 
     def get_alarm_values(self):
@@ -282,10 +293,13 @@ class MyWindow(tk.Frame):
 
         return True
 
+    def on_motion(self, event):
+        self.geometry('+{0}+{1}'.format(event.x_root, event.y_root))
+
     def on_key_press(self, e):
-        if e.keysym == "Escape":      # Escape --> QUIT
+        if e.keysym == "Escape":            # Escape --> QUIT
             if self.clock_mode:
-                self.parent.destroy()
+                self.master.destroy()
             else:
                 if self.counter_set:
                     self.counter_set = False
@@ -295,29 +309,12 @@ class MyWindow(tk.Frame):
                     self.remove_alarm_values()
                 self.draw_clock()
 
-        elif e.keysym in ("t", "T"):         # t, T --> Add / Remove TITLE BAR
-            if self.clock_mode:
-                if self.decorated:
-                    if "Windows" in self.archOS:
-                        self.parent.overrideredirect(True)
-                    else:
-                        self.parent.attributes('-type', 'dock')
-                    self.parent.attributes('-topmost', True)
-                else:
-                    if "Windows" in self.archOS:
-                        self.parent.overrideredirect(False)
-                    else:
-                        self.parent.attributes('-type', 'normal')
-                    self.parent.attributes('-topmost', False)
-                self.parent.resizable(False, False)
-                self.decorated = not self.decorated
-
-        elif e.keysym in ("a", "A"):  # a, A --> Alarm mode
+        elif e.keysym in ("a", "A"):        # a, A --> Alarm mode
             if self.clock_mode:
                 self.alarm_set = True
                 self.get_alarm_values()
 
-        elif e.keysym in ("c", "C"):         # c, C --> Counter mode
+        elif e.keysym in ("t", "T"):         # t, T --> Timer mode
             if self.clock_mode:
                 self.counter_set = True
                 self.get_counter_values()
@@ -329,7 +326,7 @@ class MyWindow(tk.Frame):
                 self.stop_timer()
                 self.draw_clock()
 
-        elif e.keysym == "Return":    # Return --> Gather Countdown / Alarm values
+        elif e.keysym == "Return":          # Return --> Gather Countdown / Alarm values
             if self.alarm_set:
                 self.hh_alarm = str(format(int(self.get_hour.get()), "02d"))
                 self.mm_alarm = str(format(int(self.get_min.get()), "02d"))
@@ -363,7 +360,7 @@ def notify(message, sound):
 
 
 def main():
-    root = tk.Tk()
+    root = FakeRoot()
     MyWindow(root)
     root.mainloop()
 
