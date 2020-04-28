@@ -21,7 +21,6 @@ MOVE WINDOW:        Mouse Button-1
 import platform
 import time
 import tkinter as tk
-from PIL import ImageTk
 import threading
 import tkutils as tt
 import utils
@@ -92,13 +91,13 @@ class Clock(tk.Toplevel):
         self.label = tk.Label(self, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
         tt.Tooltip(self.label, text=self.tooltip)
 
-        img = ImageTk.PhotoImage(file=utils.get_resource_path("resources/Alarm_set.png"))
+        img = tk.PhotoImage(file=utils.get_resource_path("resources/Alarm_set.png"))
         self.alarm_image = tk.Label(self, image=img, bg=self.bg_color)
         self.alarm_image.image = img
         self.alarm_tt = tt.Tooltip(self.alarm_image, text="")
 
         # Not used at the moment
-        # img = ImageTk.PhotoImage(file=get_resource_path("resources/Alarm_not_set.png"))
+        # img = tk.PhotoImage(file=get_resource_path("resources/Alarm_not_set.png"))
         # self.alarm_not_set_image = tk.Label(image=img, bg=self.bg_color)
         # self.alarm_not_set_image.image = img
 
