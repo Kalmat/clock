@@ -1,9 +1,5 @@
 gi
 cairo
-os
-platform
-time
 pillow
 plyer
 playsound
-threading

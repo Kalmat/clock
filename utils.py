@@ -8,11 +8,13 @@ import plyer
 import playsound
 
 
-def get_resource_path(rel_path):
+def resource_path(rel_path):
     """ Thanks to: detly < https://stackoverflow.com/questions/4416336/adding-a-program-icon-in-python-gtk/4416367 > """
     dir_of_py_file = os.path.dirname(__file__)
     rel_path_to_resource = os.path.join(dir_of_py_file, rel_path)
     abs_path_to_resource = os.path.abspath(rel_path_to_resource)
+    if abs_path_to_resource[-1:] != os.path.sep:
+        abs_path_to_resource += os.path.sep
     return abs_path_to_resource
 
 
@@ -21,7 +23,7 @@ def notify(message, sound, icon):
         plyer.notification.notify(
             title='Clock by alef',
             message=message,
-            app_icon=get_resource_path(icon),
+            app_icon=resource_path(icon),
             timeout=5,
         )
 
@@ -55,12 +57,12 @@ def load_font(archOS, fontpath, private=True, enumerable=False):
     else:
         from fontTools.ttLib import TTFont
         try:
-            TTFont(get_resource_path(fontpath))
+            TTFont(resource_path(fontpath))
             return True
         except:
             return False
 
-####################################################################
+
 def win_run_as_admin(argv=None, debug=False, force_admin=True):
     # https://stackoverflow.com/questions/19672352/how-to-run-python-script-with-elevated-privilege-on-windows (Gary Lee)
 
@@ -97,7 +99,6 @@ def win_run_as_admin(argv=None, debug=False, force_admin=True):
     return None
 
 
-####################################################################
 def subprocess_args(include_stdout=True):
     # https: // github.com / pyinstaller / pyinstaller / wiki / Recipe - subprocess (by twisted)
     # The following is true only on Windows.
@@ -139,7 +140,7 @@ def subprocess_args(include_stdout=True):
                 'env': env})
     return ret
 
-####################################################################
+
 def WrapText(text, font, width):
     # ColdrickSotK
     # https://github.com/ColdrickSotK/yamlui/blob/master/yamlui/util.py#L82-L143
@@ -177,39 +178,7 @@ def WrapText(text, font, width):
 
     return wrapped_lines
 
-###############################################################################
-def getSunSign():
-    # Constellations
-    ZD = [119, 218, 320, 419, 520, 620, 722, 822, 922, 1022, 1121, 1221, 1231]
-    ZN = ['Capricorn', 'Aquarius', 'Pisces', 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpius',
-          'Sagittarius', 'Capricorn']
 
-    sunsign = ""
-
-    mdd = int(time.strftime("%m%d"))
-
-    for i in range(len(ZD)):
-        if mdd <= ZD[i]:
-            sunsign = ZN[i]
-            break
-
-    return sunsign
-
-
-####################################################################
-def measure_temp(archOS):
-    # Will only work on Linux OS
-    if "arm" in archOS:
-        temp = os.popen("vcgencmd measure_temp").readline()
-    elif "Linux" in archOS:
-        temp = os.popen("cat /sys/class/thermal/thermal_zone*/temp")
-    else:
-        temp = "n/a"
-
-    return temp.replace("temp=", "")
-
-
-####################################################################
 def to_float(s, dec=1):
     num = ''.join(n for n in str(s) if n.isdigit() or n == "." or n == "-")
     try:
@@ -218,7 +187,6 @@ def to_float(s, dec=1):
         return 0.0
 
 
-####################################################################
 def elimina_tilde(cadena):
     # Use only in python 2. Not required (and will not work) on python 3
 

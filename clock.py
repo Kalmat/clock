@@ -16,6 +16,7 @@ SET ALARM:          a / A (hh:mm)
 SET TIMER:          t / T (mm:ss)
 STOP ALARM/TIMER:   s / S
 MOVE WINDOW:        Mouse Button-1
+MINIMIZE:           Mouse Button-2
 """
 
 import platform
@@ -40,28 +41,30 @@ class Clock(tk.Toplevel):
         self.clock_mode = True
         self.alarm_set = False
         self.timer_set = False
-        self.time_label = None
+
         self.bg_color = "gray19"
         self.font = "Helvetica"
-        if utils.load_font(self.archOS, utils.get_resource_path("resources/DigitalDismay.otf"), True, False):
-            self.font = "DigitalDismay"
-        self.font_size = int(38 * (self.winfo_screenwidth() / 1920))
+        self.resources_folder = utils.resource_path("resources/")
+        if utils.load_font(self.archOS, self.resources_folder + "DigitalDismay.otf", False, True):
+            self.font = "Digital Dismay"
+        self.font_size = int(38 * (self.winfo_screenheight() / 1080))
         self.font_color = "white"
         self.tooltip = "Click on clock to enter a command:\n" \
                        "QUIT:\tEscape\n" \
                        "ALARM:\ta (hh:mm)\n" \
                        "TIMER:\tt (mm:ss)\n" \
                        "STOP:\ts (alarm / timer)\n" \
-                       "MOVE:\tMouse Button-1"
-        self.minutes = 10
+                       "MOVE:\tMouse Button-1\n" \
+                       "TRAY:\tMouse Button-2"
         self.init_minutes = 10
         self.init_seconds = 0
+        self.minutes = 10
         self.seconds = 0
         self.time_label = None
         self.hh_alarm = ""
         self.mm_alarm = ""
         self.callback_job = None
-        self.beep_sound = utils.get_resource_path("resources/beep.wav")
+        self.beep_sound = self.resources_folder + "beep.wav"
         self.mouse_X_pos = -1
         self.mouse_Y_pos = -1
 
@@ -73,43 +76,46 @@ class Clock(tk.Toplevel):
         self.geometry("%dx%d+%d+%d" % (1, 1, 200, 200))  # On Linux, window seems to stick to its default size. This will prevent it
         self.wait_visibility(self)
         self.configure(bg=self.bg_color)
-        self.wm_attributes("-alpha", 0.6)
-        if "Windows" in self.archOS:
+        self.wm_attributes("-alpha", 0.7)
+        if "Linux" in self.archOS:
+            self.attributes("-type", "dock")    # There is no other way to hide the title bar (type: "dock" or "splash")
+        else:
             self.overrideredirect(True)
             self.attributes('-topmost', True)
             self.resizable(False, False)
-        else:
-            self.attributes("-type", "dock")
 
         # Event bindings
         self.bind('<KeyRelease>', self.on_key_press)
         self.bind('<Button-1>', self.on_enter)
-        self.bind('<Button-2>', self.on_enter)
+        self.bind('<Button-3>', self.on_button3)
         self.bind('<B1-Motion>', self.on_motion)
+        self.master.bind('<<FOCUSIN>>', self.on_map_change)
+        self.master.bind('<<MAP>>', self.on_map_change)
+        self.master.bind('<<UNMAP>>', self.on_map_change)
 
         # Widgets
         self.label = tk.Label(self, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
         tt.Tooltip(self.label, text=self.tooltip)
 
-        img = tk.PhotoImage(file=utils.get_resource_path("resources/Alarm_set.png"))
+        img = tk.PhotoImage(file=self.resources_folder + "Alarm_set.png")
         self.alarm_image = tk.Label(self, image=img, bg=self.bg_color)
         self.alarm_image.image = img
         self.alarm_tt = tt.Tooltip(self.alarm_image, text="")
 
         # Not used at the moment
-        # img = tk.PhotoImage(file=get_resource_path("resources/Alarm_not_set.png"))
+        # img = tk.PhotoImage(file=self.resources_folder + "Alarm_not_set.png")
         # self.alarm_not_set_image = tk.Label(image=img, bg=self.bg_color)
         # self.alarm_not_set_image.image = img
 
-        self.get_hour = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
+        self.get_hour = tk.Entry(self, font=(self.font, self.font_size), width=2)
         tt.Tooltip(self.get_hour, text="Enter hours (HH)")
 
         self.values_label = tk.Label(self, bg=self.bg_color, text=":", font=(self.font, self.font_size), fg=self.font_color)
 
-        self.get_min = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
+        self.get_min = tk.Entry(self, font=(self.font, self.font_size), width=2)
         tt.Tooltip(self.get_min, text="Enter minutes (MM)")
 
-        self.get_sec = tk.Entry(self, font=self.font+" "+str(self.font_size), width=2)
+        self.get_sec = tk.Entry(self, font=(self.font, self.font_size), width=2)
         tt.Tooltip(self.get_sec, text="Enter seconds (SS)")
 
         self.geometry("")
@@ -239,16 +245,37 @@ class Clock(tk.Toplevel):
         else:
             message = "Oops, don't know why you're watching this. Likely, something went wrong :("
 
-        t = threading.Thread(target=utils.notify, args=(message, self.beep_sound, "resources/clock.ico"))
+        t = threading.Thread(target=utils.notify, args=(message, self.beep_sound, self.resources_folder + "clock.ico"))
         t.start()
 
-    def on_enter(self, e):
+    def on_enter(self, e=None):
         e.widget.focus_force()
         self.mouse_X_pos = e.x
         self.mouse_Y_pos = e.y
 
-    def on_motion(self, e):
+    def on_motion(self, e=None):
         self.geometry('+{0}+{1}'.format(e.x_root - self.mouse_X_pos, e.y_root - self.mouse_Y_pos))
+
+    def minimize(self):
+        self.update_idletasks()
+        self.overrideredirect(False)
+        self.state('withdrawn')  # Use this for fake roots (or it will generate two icons)
+        # self.state('iconic')   # Use this for non-fake roots (or no icon will be present)
+        self.overrideredirect(True)
+
+    def maximize(self):
+        self.update_idletasks()
+        self.overrideredirect(True)
+        self.state('normal')
+
+    def on_button3(self, e=None):
+        self.minimize()
+
+    def on_map_change(self, e=None):
+        if self.state() == "normal":
+            self.minimize()
+        elif self.state() == "withdrawn":
+            self.maximize()
 
     def set_key_validators(self, on=True):
         if on:
@@ -316,10 +343,6 @@ class Clock(tk.Toplevel):
                 self.stop_callback()
                 self.draw_clock()
 
-        # elif e.keysym in ("m", "M"):         # m, M --> Minimize / Maximize
-        #     if self.clock_mode:
-        #         self.iconify()
-
         elif e.keysym == "Return":          # Return --> Gather Countdown / Alarm values
             if self.alarm_set:
                 self.hh_alarm = str(format(int(self.get_hour.get()), "02d"))
@@ -333,7 +356,7 @@ class Clock(tk.Toplevel):
 
 
 def main():
-    root = tt.FakeRoot("Clock by alef", "resources/clock.ico")
+    root = tt.FakeRoot("Clock by alef", utils.resource_path("resources/") + "clock.ico")
     Clock(root)
     root.mainloop()
 

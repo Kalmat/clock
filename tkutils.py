@@ -3,20 +3,46 @@ from PIL import ImageTk
 
 
 class FakeRoot(tk.Tk):
-    # (Author: noob oddy) https://stackoverflow.com/questions/4066027/making-tkinter-windows-show-up-in-the-taskbar
+    # It creates a "Fake", minimum, transparent, iconified root window on top of which you can create a TopLevel
+    # It allows to set system caption and icon, what would not be possible if TopLevel child has no title bar
+    # Based on: (noob oddy) https://stackoverflow.com/questions/4066027/making-tkinter-windows-show-up-in-the-taskbar
 
     def __init__(self, title, icon):
         tk.Tk.__init__(self)
+
         self.title(title)
         self.wm_title(title)
         img = ImageTk.PhotoImage(file=icon)
         self.tk.call('wm', 'iconphoto', self._w, img)
+
         self.wait_visibility(self)
         self.configure(bg="black")
         self.attributes('-alpha', 0.0)
         self.geometry("1x1+0+0")
         self.lower()
-        self.iconify()
+        # self.iconify()
+
+        # Catch and propagate WM Focus events (might be useful for the TopLevel child)
+        # self.protocol('WM_TAKE_FOCUS', self.on_take_focus())  # Maybe it only works on Linux???
+        self.bind('<FocusIn>', self.on_focus_in)
+        self.bind('<FocusOut>', self.on_focus_out)
+        self.bind('<Map>', self.on_map)
+        self.bind('<Unmap>', self.on_unmap)
+
+    def on_take_focus(self, e=None):
+        self.event_generate("<<TAKEFOCUS>>")
+
+    def on_focus_in(self, e=None):
+        self.event_generate("<<FOCUSIN>>")
+
+    def on_focus_out(self, e=None):
+        self.event_generate("<<FOCUSOUT>>")
+
+    def on_map(self, e=None):
+        self.event_generate("<<MAP>>")
+
+    def on_unmap(self, e=None):
+        self.event_generate("<<UNMAP>>")
 
 
 class Tooltip:
@@ -166,5 +192,3 @@ class Tooltip:
         if tw:
             tw.destroy()
         self.tw = None
-
-
