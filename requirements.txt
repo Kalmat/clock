@@ -3,3 +3,4 @@ cairo
 pillow
 plyer
 playsound
+pywinctl

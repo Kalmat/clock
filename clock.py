@@ -20,6 +20,7 @@ MINIMIZE:           Mouse Button-2
 """
 
 import platform
+import pywinctl
 import time
 import tkinter as tk
 import threading
@@ -47,7 +48,7 @@ class Clock(tk.Toplevel):
         self.resources_folder = utils.resource_path("resources/")
         if utils.load_font(self.archOS, self.resources_folder + "DigitalDismay.otf", False, True):
             self.font = "Digital Dismay"
-        self.font_size = int(38 * (self.winfo_screenheight() / 1080))
+        self.font_size = int(40 * (self.winfo_screenheight() / 1080))
         self.font_color = "white"
         self.tooltip = "Click on clock to enter a command:\n" \
                        "QUIT:\tEscape\n" \
@@ -81,17 +82,21 @@ class Clock(tk.Toplevel):
             self.attributes("-type", "dock")    # There is no other way to hide the title bar (type: "dock" or "splash")
         else:
             self.overrideredirect(True)
-            self.attributes('-topmost', True)
+            # self.attributes('-topmost', True)
             self.resizable(False, False)
+        self.windows = [pywinctl.Window(int(self.master.frame(), base=16)),
+                        pywinctl.Window(int(self.frame(), base=16))]
+        for win in self.windows:
+            win.alwaysOnTop()
 
         # Event bindings
         self.bind('<KeyRelease>', self.on_key_press)
         self.bind('<Button-1>', self.on_enter)
         self.bind('<Button-3>', self.on_button3)
         self.bind('<B1-Motion>', self.on_motion)
-        self.master.bind('<<FOCUSIN>>', self.on_map_change)
-        self.master.bind('<<MAP>>', self.on_map_change)
-        self.master.bind('<<UNMAP>>', self.on_map_change)
+        self.master.bind('<<FOCUSIN>>', self.on_focusIn)
+        self.master.bind('<<MAP>>', self.on_map)
+        self.master.bind('<<UNMAP>>', self.on_unmap)
 
         # Widgets
         self.label = tk.Label(self, bg=self.bg_color, font=(self.font, self.font_size), fg=self.font_color)
@@ -258,24 +263,27 @@ class Clock(tk.Toplevel):
 
     def minimize(self):
         self.update_idletasks()
-        self.overrideredirect(False)
         self.state('withdrawn')  # Use this for fake roots (or it will generate two icons)
         # self.state('iconic')   # Use this for non-fake roots (or no icon will be present)
-        self.overrideredirect(True)
 
     def maximize(self):
         self.update_idletasks()
-        self.overrideredirect(True)
         self.state('normal')
 
     def on_button3(self, e=None):
         self.minimize()
 
-    def on_map_change(self, e=None):
+    def on_focusIn(self, e=None):
+        if self.state() != "normal":
+            self.maximize()
+
+    def on_map(self, e=None):
+        if self.state() != "normal":
+            self.maximize()
+
+    def on_unmap(self, e=None):
         if self.state() == "normal":
             self.minimize()
-        elif self.state() == "withdrawn":
-            self.maximize()
 
     def set_key_validators(self, on=True):
         if on:
