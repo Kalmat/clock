@@ -5,7 +5,7 @@ I couldn't find anything similar, so I decided to code it!
 Feel free to use it, modify it, distribute it or whatever... just be sure to mention me or... well, nothing really.
 
 ## WARNING:
-Linux only (by the moment) 
+Windows and Linux only (by the moment) 
 
 ## Usage:
     MOVE WINDOW:    m or Home+MouseLeft or Alt+F7
